@@ -90,12 +90,16 @@ class CoreCrudClient(AsyncBaseCoreClient):
             )
             collections_result: Collections = await conn.fetchval(q, *p)
 
-        next: Optional[str] = None
-        prev: Optional[str] = None
-
-        if links := collections_result.get("links"):
-            next = collections_result["links"].pop("next")
-            prev = collections_result["links"].pop("prev")
+        # Starting in pgstac 0.9.0, the `next` and `prev` tokens are returned in spec-compliant links with method GET
+        next_from_link: Optional[str] = None
+        prev_from_link: Optional[str] = None
+        for link in collections_result.get("links", []):
+            if link.get("rel") == "next":
+                next_from_link = link.get("href")
+            if link.get("rel") == "prev":
+                prev_from_link = link.get("href")
+        next: Optional[str] = next_from_link
+        prev: Optional[str] = prev_from_link
 
         linked_collections: List[Collection] = []
         collections = collections_result["collections"]

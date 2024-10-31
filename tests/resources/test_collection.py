@@ -303,3 +303,23 @@ async def test_get_collections_search(
         "/collections",
     )
     assert len(resp.json()["collections"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_all_collections_paginate(app_client, load_test_collection, load_test2_collection):
+    # check that we handle next/prev page tokens correctly for pgstac >= 0.9.1
+    resp = await app_client.get(
+        "/collections",
+        params={"limit": 1}
+    )
+    assert len(resp.json()["collections"]) == 1
+    assert resp.json()["collections"][0]["id"] == load_test_collection["id"]
+
+    next_link = next(link for link in resp.json()["links"] if link["rel"] == "next")["href"]
+    resp = await app_client.get(
+        "collections",
+        params={"limit": 1, "token": next_link}
+    )
+
+    assert len(resp.json()["collections"]) == 1
+    assert resp.json()["collections"][0]["id"] == load_test2_collection["id"]
